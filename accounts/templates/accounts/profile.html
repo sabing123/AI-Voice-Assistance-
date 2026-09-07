@@ -1,0 +1,157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" x-data="{ theme: localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') }" :data-theme="theme" x-init="$watch('theme', val => localStorage.setItem('theme', val))">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{username}} - Profile</title>
+    <!-- Inter Font & Bootstrap 5 CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            overflow-y: auto;
+            padding: 40px 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+        .auth-glass-card {
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 30px 80px var(--shadow-color), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            color: var(--text-primary);
+            overflow: hidden;
+            transition: background 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+        }
+        .auth-glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.7) 50%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+        .form-control {
+            background: var(--glass-bg) !important;
+            border: 1px solid var(--glass-border) !important;
+            color: var(--text-primary) !important;
+            backdrop-filter: blur(12px);
+            transition: background 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+        }
+        .form-control:focus {
+            border-color: var(--accent-violet) !important;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25) !important;
+            background: var(--glass-bg-hover) !important;
+        }
+        .form-label {
+            color: var(--text-secondary) !important;
+            transition: color 0.4s ease;
+        }
+        .theme-switch-corner {
+            position: fixed;
+            top: 24px;
+            right: 28px;
+            z-index: 100;
+        }
+    </style>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+    <!-- Modern Glassmorphism Toastr Notification -->
+    {% if messages %}
+        <div style="position: fixed !important; top: 20px !important; right: 20px !important; z-index: 1080; pointer-events: none;">
+            {% for message in messages %}
+                <div x-data="{ show: true }" 
+                     x-show="show" 
+                     :style="show ? 'display: flex; align-items: center; position: relative; overflow: hidden; background: var(--glass-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--glass-border) !important; min-width: 340px; pointer-events: auto;' : 'display: none;'"
+                     x-init="setTimeout(() => show = false, 4500)"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 transform translate-y-[-20px] scale-95"
+                     x-transition:enter-end="opacity-100 transform translate-y-0 scale-100"
+                     x-transition:leave="transition ease-in duration-350"
+                     x-transition:leave-start="opacity-100 transform translate-y-0 scale-100"
+                     x-transition:leave-end="opacity-0 transform translate-y-[-10px] scale-90"
+                     class="auth-glass-card p-3 pe-5 mb-3 shadow-lg gap-3 rounded-4 border-0">
+                    <div class="user-avatar" style="background: linear-gradient(135deg, #10b981, #06b6d4);">✨</div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-primary" style="font-size: 0.95rem;">Profile Updated!</div>
+                        <div class="small" style="color: var(--text-secondary);">{{ message }}</div>
+                    </div>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3" @click="show = false" aria-label="Close" style="opacity: 0.8;"></button>
+
+                    <!-- Countdown progress bar -->
+                    <div class="position-absolute bottom-0 start-0 w-100 overflow-hidden rounded-bottom-4" style="height: 3px; background: rgba(255,255,255,0.1); pointer-events: none;">
+                        <div class="h-100" style="background: linear-gradient(90deg, #10b981, #06b6d4); width: 100%; transition: width 4.5s linear;" x-init="setTimeout(() => { $el.style.width = '0%'; }, 50)"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Atmospheric Ambient Background Gradients -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <!-- Theme Switcher Button in Corner -->
+    <div class="theme-switch-corner">
+        <button class="sound-toggle-btn" @click="theme = theme === 'dark' ? 'light' : 'dark'" x-text="theme === 'dark' ? '☀ Light' : '🌙 Dark'"></button>
+    </div>
+
+    <div class="auth-glass-card p-5 my-auto" style="width: 100%; max-width: 520px;">
+        <div class="text-center mb-4">
+            <span class="fs-1">👤</span>
+            <h3 class="fw-bold mt-2" style="background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Your Profile</h3>
+            <p class="small" style="color: var(--text-secondary);">Manage your account details and profile information</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <h5 class="fw-semibold mb-3" style="color: var(--text-primary); font-size: 1rem;">Account Information</h5>
+            {% for field in user_form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold small">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <h5 class="fw-semibold mt-4 mb-3" style="color: var(--text-primary); font-size: 1rem;">Profile Details</h5>
+            {% for field in profile_form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold small">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm mt-3 rounded-3" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet)); border: none;">Save Changes</button>
+        </form>
+
+        <div class="text-center mt-4 pt-3 border-top border-secondary border-opacity-25">
+            <p class="small mb-0"><a href="{% url 'assistant:index' %}" class="text-decoration-none" style="color: var(--text-secondary);">&larr; Back to Assistant</a></p>
+        </div>
+    </div>
+</body>
+</html>

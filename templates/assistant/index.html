@@ -1,0 +1,199 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Assistant</title>
+    <!-- Inter Font & Bootstrap 5 CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="{% static 'js/assistant.js' %}?v=2"></script>
+</head>
+<body x-data="voiceAssistant()" x-init="initApp()">
+    <!-- Atmospheric Ambient Background Gradients -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <div class="main-layout">
+        <!-- Sidebar for Conversation History -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <span class="sparkle">✦</span> History
+                </div>
+                <button class="btn-new-chat" @click="startNewChat()">
+                    <span>+ New Chat</span>
+                </button>
+            </div>
+            <div class="conversation-list">
+                <template x-for="conv in conversations" :key="conv.id">
+                    <div class="conversation-item" 
+                         :class="{ 'active': conversationId === conv.id }"
+                         @click="loadConversation(conv.id)">
+                        <span x-text="conv.title" class="text-truncate flex-grow-1 me-2"></span>
+                        
+                        <!-- Dropdown Menu for Rename/Delete -->
+                        <div class="dropdown" x-data="{ open: false }" @click.stop>
+                            <button class="btn btn-sm btn-link conversation-action-btn p-0 border-0" @click="open = !open" title="Options">
+                                ⋮
+                            </button>
+                            <div x-show="open" @click.outside="open = false" 
+                                 class="dropdown-menu show position-absolute end-0 mt-1 shadow-lg border-0 chat-dropdown-menu" 
+                                 style="z-index: 100; min-width: 140px;">
+                                <button class="dropdown-item chat-dropdown-item d-flex align-items-center gap-2" 
+                                        @click="open = false; renameConversation(conv.id, conv.title)">
+                                    ✏️ Rename
+                                </button>
+                                <button class="dropdown-item text-danger chat-dropdown-item d-flex align-items-center gap-2" 
+                                        @click="open = false; deleteConversation(conv.id)">
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="conversations.length === 0">
+                    <div class="no-history">
+                        {% if user.is_authenticated %}
+                            No past conversations.
+                        {% else %}
+                            <a href="{% url 'accounts:login' %}" class="auth-prompt-link">Login</a> to save history.
+                        {% endif %}
+                    </div>
+                </template>
+            </div>
+            <div class="sidebar-footer">
+                {% if user.is_authenticated %}
+                    <div class="user-badge">
+                        <span class="user-avatar">{{ user.username|slice:":1"|upper }}</span>
+                        <a href="{% url 'accounts:profile' %}" class="auth-action-link" title="Profile Settings">
+                        <span class="username" x-text="'{{ user.username }}'"></span>
+                        </a>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <a href="{% url 'accounts:logout' %}" class="auth-action-link" title="Logout">Logout</a>
+                    </div>
+                {% else %}
+                    <div class="auth-links-group">
+                        <a href="{% url 'accounts:login' %}" class="auth-action-link">Login</a>
+                        <a href="{% url 'accounts:signup' %}" class="auth-action-link signup-btn">Sign Up</a>
+                    </div>
+                {% endif %}
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <!-- Top Header & Orb Centerpiece -->
+            <header class="workspace-header glass-panel-sm">
+                <div class="brand-cluster">
+                    <div class="ai-orb-mini" :class="{ 'listening': isRecording, 'thinking': isLoading }"></div>
+                    <h1 class="brand-name">Voice Assistant AI</h1>
+                </div>
+
+                <!-- AI State Status -->
+                <div class="ai-status-pill" x-text="isRecording ? 'Listening...' : (isLoading ? 'Processing...' : 'Ready')"></div>
+
+                <div class="header-actions">
+                    <button class="theme-toggle-btn" 
+                            @click="toggleTheme()" 
+                            :title="theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+                        <span x-text="theme === 'dark' ? '☀ Light' : '🌙 Dark'"></span>
+                    </button>
+                    <button class="sound-toggle-btn" 
+                            :class="{ 'active': globalSoundEnabled }"
+                            @click="toggleGlobalSound()" 
+                            :title="globalSoundEnabled ? 'Disable speech output' : 'Enable speech output'">
+                        <span x-text="globalSoundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF'"></span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Error Banner -->
+            <template x-if="errorMessage">
+                <div class="error-banner glass-panel-sm" x-text="errorMessage"></div>
+            </template>
+
+            <!-- Listening Banner -->
+            <template x-if="isRecording">
+                <div class="listening-banner glass-panel-sm">
+                    <span class="pulse-dot"></span> 
+                    <span>Listening to your voice... Speak now. Click mic to stop.</span>
+                </div>
+            </template>
+
+            <!-- Chat / Message Surface -->
+            <div id="chat-container" class="chat-container">
+                <template x-for="(msg, index) in messages" :key="index">
+                    <div class="message-wrapper" :class="msg.role">
+                        <div class="message glass-message" :class="msg.role">
+                            <div class="message-content" x-text="msg.content"></div>
+                            <template x-if="msg.role === 'assistant'">
+                                <div class="message-footer">
+                                    <button class="btn-talk" 
+                                            :disabled="!globalSoundEnabled" 
+                                            @click="playMessageAudio(msg)"
+                                            :title="globalSoundEnabled ? 'Play speech audio' : 'Enable sound in header first'">
+                                        <span class="talk-icon">🔊</span> <span>Listen</span>
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="isLoading">
+                    <div class="loading-wrapper">
+                        <div class="thinking-orb"></div>
+                        <span class="loading-text">Synthesizing response...</span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Floating Glass Input Dock -->
+            <div class="input-dock glass-panel">
+                <button class="btn-mic" :class="{ 'recording': isRecording }" @click="toggleRecording()" title="Voice Interaction">
+                    <svg class="mic-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                </button>
+                <input type="text" 
+                       x-model="inputMessage" 
+                       @keydown.enter="sendMessage()" 
+                       placeholder="Ask Aether anything or click mic to speak..." 
+                       :disabled="isLoading">
+                <button class="btn-send" @click="sendMessage()" :disabled="isLoading" title="Send Message">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Rename Chat Modal Popup -->
+    <template x-if="showRenameModal">
+        <div style="position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; display: flex !important; align-items: center !important; justify-content: center !important; background: rgba(5, 5, 9, 0.4) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; z-index: 99999 !important; margin: 0 !important; padding: 20px !important;" @click.self="closeRenameModal()">
+            <div class="auth-glass-card p-4 p-md-5 rounded-4 shadow-lg" style="width: 100% !important; max-width: 480px !important; flex-shrink: 0 !important; background: var(--bg-secondary) !important; border: 1px solid var(--glass-border) !important; animation: modalAppear 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important; box-shadow: 0 30px 90px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.4) !important;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="fw-bold m-0 text-primary" style="font-size: 1.25rem;">✏️ Rename Conversation</h4>
+                    <button type="button" class="btn-close" @click="closeRenameModal()" aria-label="Close" style="opacity: 0.8;"></button>
+                </div>
+                <p class="small mb-4" style="color: var(--text-secondary);">Update the title for this chat session so you can find it easily later.</p>
+                <form @submit.prevent="submitRename()">
+                    <div class="mb-4">
+                        <label for="rename-input-field" class="form-label fw-semibold small mb-2" style="color: var(--text-secondary);">New Chat Title</label>
+                        <input type="text" id="rename-input-field" x-model="newChatTitle" class="form-control py-3 px-3 rounded-3" placeholder="Enter new chat title..." required style="background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-primary); font-size: 0.95rem;">
+                    </div>
+                    <div class="d-flex justify-content-end gap-3 pt-2">
+                        <button type="button" class="btn btn-outline-secondary px-4 py-2.5 rounded-3 text-secondary small fw-semibold" @click="closeRenameModal()" style="border-color: var(--glass-border); background: var(--glass-bg);">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4 py-2.5 rounded-3 small fw-semibold shadow-sm" style="background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet)); border: none;">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+</body>
+</html>
