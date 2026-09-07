@@ -41,9 +41,7 @@
                         
                         <!-- Dropdown Menu for Rename/Delete -->
                         <div class="dropdown" x-data="{ open: false }" @click.stop>
-                            <button class="btn btn-sm btn-link conversation-action-btn p-0 border-0" @click="open = !open" title="Options">
-                                ⋮
-                            </button>
+                            <button class="btn btn-sm conversation-action-btn p-0 border-0" @click="open = !open" title="Options">⋮</button>
                             <div x-show="open" @click.outside="open = false" 
                                  class="dropdown-menu show position-absolute end-0 mt-1 shadow-lg border-0 chat-dropdown-menu" 
                                  style="z-index: 100; min-width: 140px;">
