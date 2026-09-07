@@ -2,6 +2,26 @@
 
 A web-based AI Voice Assistant built with Python, Django, and Django REST Framework, featuring a Dark/Light Glassmorphic Spatial UI.
 
+##envs
+-create dir with local and inside in the dir use two dir .django and .postgres
+- .django
+   ```commandline
+   AI_API_KEY=use-your-key
+   STT_API_KEY=change-me
+   TTS_API_KEY=change-me
+   AI_MODEL=gemini-1.5-flash
+   WHISPER_MODEL_SIZE=base
+   TTS_LANG=en
+   ```
+  
+- .postgres
+   ```commandline
+   POSTGRES_HOST=postgres
+   POSTGRES_PORT=5432
+   POSTGRES_DB=your-db
+   POSTGRES_USER=your-username
+   POSTGRES_PASSWORD=yoru-pass
+   ```
 ## Requirements
 
 - Python 3.11+
