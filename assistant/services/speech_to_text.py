@@ -14,7 +14,8 @@ class SpeechToTextService:
 
 class FasterWhisperService(SpeechToTextService):
     def __init__(self):
-        self.model_size = os.getenv('WHISPER_MODEL_SIZE', 'base')
+        self.model_size = os.getenv('WHISPER_MODEL_SIZE', 'tiny')
+        self.beam_size = int(os.getenv('WHISPER_BEAM_SIZE', '1'))
         self._model = None
 
     @property
@@ -33,7 +34,7 @@ class FasterWhisperService(SpeechToTextService):
             return "Hello, this is a simulated voice transcription."
 
         try:
-            segments, info = self.model.transcribe(audio_file_path, beam_size=5)
+            segments, info = self.model.transcribe(audio_file_path, beam_size=self.beam_size)
             text = " ".join([segment.text for segment in segments]).strip()
             return text if text else "Audio transcription was empty."
         except Exception as e:
